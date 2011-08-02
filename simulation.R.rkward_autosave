@@ -1,0 +1,71 @@
+get.data = function(demography=list(), T=1) {
+  # demographic stuff
+  # maybe use leslie??
+
+
+  demography$population = round(runif(150,0,100))
+  demography$employed = demography$population - round(abs(rnorm(150,0,20)))
+  demography$out_workforce = round(abs(rnorm(150,1:150,(1:150)/2)))
+  demography$unemployed = demography$population-demography$employed-demography$out_workforce
+  demography$in_to_employment =
+  demography$out_of_employment = 
+
+
+  demography$fertility = matrix(rep(c(rep(0,16), rep(0.25, 14), rep(0.125, 10), rep(0,110)), T), ncol=T)
+  demography$mortality = matrix(rep(c(rep(0.1,5), rep(0.01, 11), rep(0.1, 14), rep(0.01,10),rep(0.1,10),rep(0.2,10),rep(0.3,10),rep(0.4,10),rep(0.5,70)), T), ncol=T)
+  
+  
+
+  return (demography)
+}
+
+set.data = function(T = 2009-2007) {
+  set.seed(1)
+  
+  # initializion:
+  # the following variables are stock variables per age cohort. They can be changed to include time. For example by defining them as a matrix with columns representing time points
+  population = rep(0,150) # 150 cohorts (1 per year of age)
+  employed = rep(0,150) # 150 cohorts (1 per year of age)
+  unemployed = rep(0,150) # 150 cohorts (1 per year of age)
+  out_workforce = rep(0,150) # 150 cohorts (1 per year of age) 
+  in_workforce = rep(0,150) # 150 cohorts (1 per year of age)
+  open_jobs = rep(0,150) # 150 cohorts (1 per year of age)
+  
+  # the following variables are flow variables per age cohort (see above) 
+  #crude_birth_rate = matrix(rep(0,150*T), 150) # each Kohort has a different cbr and it changes potentially with t
+  fertility = matrix(rep(0,150*T), 150) # each Kohort has a different fertility and it changes potentially with t
+  mortality = matrix(rep(0,150*T), 150) # each Kohort has a different mortality and it changes potentially with t
+  out_of_workforce = matrix(rep(0,150*T), 150) # each Kohort has a different behaviour and it changes potentially with t
+  in_to_workforce = matrix(rep(0,150*T), 150) # each Kohort has a different behaviour and it changes potentially with t
+  net_migration = matrix(rep(0,150*T), 150) # net_migration per age cohort and time t
+  in_to_employment = matrix(rep(0,150*T), 150) # each Kohort has a different behaviour and it changes potentially with t
+  out_of_employment = matrix(rep(0,150*T), 150) # each Kohort has a different behaviour and it changes potentially with t
+  #population_growth = matrix(rep(0,150*T), 150) # population increases through migration and births...
+  
+  demography = get.data(list(population=population, employed=employed, unemployed=unemployed, out_workforce=out_workforce, in_workforce=in_workforce, open_jobs=open_jobs, fertility=fertility, mortality=mortality, crude_birth_rate=crude_birth_rate, net_migration=net_migration, population_growth=population_growth, out_of_workforce=out_of_workforce, in_to_workforce=in_to_workforce, in_to_employment=in_to_employment, out_of_employment=out_of_employment), T)# maybe a list so that we have demography$10.20, demography$20.30, ... or similar
+  
+  return (demography)
+}
+
+do.simulation = function() {
+  data = set.data() # initialize everything
+  start = 2007 #dunno will use more later... 
+  end = 2109
+  
+  for (n in start:end) {
+    data = age(data) # let population age...
+    data = births(data) # put births...
+    data = deaths(data)
+    
+
+ # PROBLEM: WAS TUN WENN JEMAND AUS WORKFORCE AUSSCHEIDET? --> BRAUCHE DATEN ÜBER JEDEN DATENSATZ.... R kann das, aber dann ist der PC erst mal beschäftigt... CLOUDNUMBERS?
+    data$out_workforce = data$out_workforce + move_out_off_workforce(data$in_workforce, data$in_workforce, data$out_of_workforce, data$in_to_workforce)
+    data$in_workforce = data$population - data$out_workforce
+    data$unemployed = data$unemplyed + unemploy(data$employed, data$unemployed, data$out_of_workforce, data$in_to_workforce)
+    data$in_workforce = data$population - data$out_workforce
+    
+    print(sum(data$population))
+  }
+
+  return (data)
+}
