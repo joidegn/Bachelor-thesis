@@ -109,9 +109,10 @@ move_workforce = function(demography=list(), T=1) {
 }
 
 change_employment = function(demography=list(), T=1) {
-  demography$open_jobs = demography$total_jobs - sum(demography$employed)
-  if (demography$open_jobs < 0)
-    demography$open_jobs = 0
+ # not needed anymore... 
+  #demography$open_jobs = demography$total_jobs - sum(demography$employed)
+  #if (demography$open_jobs < 0)
+  #  demography$open_jobs = 0
   #employ = demography$unemployed * demography$in_to_employment
   #new_employ = min(demography$open_jobs, round(sum(demography$unemployed) * demography$in_to_employment[T])) # Enforce maximum jobs?? Matching??
   new_employ = round(sum(demography$unemployed) * demography$in_to_employment[T])
@@ -146,27 +147,25 @@ change_employment = function(demography=list(), T=1) {
 
 
 change_employment_on_workforce_change = function(demography=list(), change=list(), T=1) {
-  demography$unemployed = demography$unemployed + change$move_in_workforce # people who move in workforce start unemployed for now:  
+  
   # people who move out are more complicated!
   # If people move out of workforce we calculate likelihood of them being employed or unemployed and reduce respectively
   pr_employed = demography$employed/demography$in_workforce
   pr_employed[demography$in_workforce==0] = 0 # remove NaNs
   pr_unemployed = 1 - pr_employed
   
+ # people who move in workforce start unemployed for now:  
+  demography$unemployed = demography$unemployed + change$move_in_workforce 
+ # The following is unrealistic: (assumption would be that people who enter workforce find jobs at the same rate as the employment rate
+  #ch_unemployed = round(change$move_in_workforce*pr_unemployed)
+  #demography$unemployed = demography$unemployed + ch_unemployed
+  #demography$employed = demography$employed + (change$move_in_workforce - ch_unemployed)
+  
   for (i in 1:150) {
     if (change$move_out_workforce[i] > 0)
       rnd_employed = rbinom(1, change$move_out_workforce[i], pr_employed[i]) # draw randomly how many per age cohort were employed... the rest were unemployed
     else
       rnd_employed = 0
-    if (is.na(rnd_employed) || is.nan(rnd_employed) || (length(rnd_employed) == 0)) { # maybe this happens when there are 0s?
-      print(demography)
-      #print(demography$employed);
-      #print(demography$in_workforce);
-      #print(demography$employed / demography$in_workforce);
-      #print(pr_employed[i]);
-      stop()
-      rnd_employed = 0
-    }
     
     if (rnd_employed > demography$employed[i]){ # if more are randomly chosen than are actually employed we need to set to actual number to not get negative employments
       rnd_employed = demography$employed[i] # need to think if this distorts likelihood (if yes change it!) maybe not because appears to only happen when employed==0
@@ -197,7 +196,11 @@ match_employment = function(demography, new_employ) {
       #cut_off[i] = employ - demography$unemployed
       #probability = (new_employ-sum(cut_off)) / sum(demography$unemployed - sum(employ)) # I think this should work as intended to countervene drops in probability
       employ[i] = demography$unemployed[i]
-
-  }  
+    if (sum(employ) >= new_employ) {# we have employed to many people.
+      # since this has started in this age cohort we can fire some people from this cohort again
+      employ[i] = employ[i] - (sum(employ)-new_employ)
+      break; # break so e dont employ more people --> This assumes that young cohorts get employed first while old cohorts might not get employed at all
+    }
+  }
   return (employ)
 }

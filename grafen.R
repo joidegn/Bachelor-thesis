@@ -1,3 +1,103 @@
+# elderly unemployment per year compared to average unemployment
+par(mfrow = c(1,1))
+data=read.csv2('Data/age_specific_unemployment.csv', stringsAsFactors=F)
+workforce = as.numeric(data$Value[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Age=="Total"])
+elderly_workforce = as.numeric(data$Value[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Age=="55 to 59"])
+elderly_unemployment = as.numeric(data$Value[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Age=="55 to 59"]) / elderly_workforce
+average_unemployment = as.numeric(data$Value[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Age=="Total"])/workforce
+years = as.numeric(data$Time[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Age=="55 to 59"])
+
+plot(years, elderly_unemployment, type="l", lty = 1, ylab="unemployment rate", xlab="Time")
+points(years, average_unemployment, lty=2, type = "l")
+legend(1970, 0.15, c("unemployment rate of 55 to 59 year olds","average unemployment rate"), lty=c(1,2))
+stop()
+# graphs for my simulation:
+#unemployment by age in 2004
+year = 2004
+par(mfrow=c(2,1))
+data=read.csv2('Data/age_specific_unemployment.csv', stringsAsFactors=F)
+unemployed = as.numeric(data$Value[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time==year & data$Age!="Total" & data$Age!="75+"])
+ages = data$Age[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time==year & data$Age!="Total" & data$Age!="75+"]
+workforce = as.numeric(data$Value[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time==year & data$Age!="Total"& data$Age!="75+"])
+plot(unemployed/workforce, ylim=c(0,0.15), xlim=c(0,length(unemployed)), ylab="", type="l", lwd=2, axes=F, main="unemployment rate by age")
+axis(2)
+box()
+axis(1, at=1:length(ages), labels=ages)
+legend(0,0.05, "average unemployment rate", lwd=1, lty=2)
+abline(h=as.numeric(data$Value[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time==year & data$Age=="Total"])/as.numeric(data$Value[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time==year & data$Age=="Total"]), lty=2)
+
+total = as.numeric(data$Value[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time==year & data$Age!="Total" & data$Age!="75+"])
+barplot(total, xlim=c(0,length(ages)), space=c(0.5, rep(0,length(total)-1)), axes=F, main="number of unemployed people", ylim=c(0,600))
+axis(2)
+box()
+axis(1, at=1:length(ages), labels=ages)
+
+#axis(1, at=1:12,labels=1:12)
+
+# average unemployed per age group
+#abline(h=sum(as.numeric(data$Value[data$Series=="Unemployment" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time=="2004" & data$Age=="Total"]))/length(as.numeric(data$Value[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Time=="2004" & data$Age!="Total"])), lty=2)
+#legend(0,150, "average number of unemployed per age group", lwd=1, lty=2)
+
+
+
+stop()
+
+#unemployment rate over time
+par(mfrow=c(1,1))
+data = c()
+year = c()
+for (i in 1: dim(res$results$unemployed)[2]) {
+  data[i] = sum(res$results$unemployed[,i])/sum(res$results$in_workforce[,i])*100
+  year[i] = res$results$years[i]
+}
+plot(year,data, type="l", ylab="unemployment rate", lwd=2)
+abline(v = 2002, lty=2) # vertical lines
+axis(1)
+#axis(2, at=seq(10000000,40000000,2000000), label=seq(10,40,2))
+legend(2000,26000000, "employed in millions")
+box()
+stop()
+# workforce change over time
+par(mfrow=c(1,1))
+data = c()
+year = c()
+for (i in 1: dim(res$results$in_workforce)[2]) {
+  data[i] = sum(res$results$in_workforce[,i])
+  year[i] = res$results$years[i]
+}
+plot(year,data, type="l", ylab="workforce", axes=F, lwd=2, ylim=c(25000000,36000000))
+abline(v = 2002, lty=2) # vertical lines
+axis(1)
+axis(2, at=seq(10000000,40000000,2000000), label=seq(10,40,2))
+legend(2000,26000000, "workforce in millions")
+box()
+stop()
+# Age distribution over time:
+par(mfrow=c(2,2))
+#res = do.simulation()
+data = matrix(rep(0,4*11),nrow=11)
+dnum = 0
+for (d in c(1,16,26,34)) { # gather data for graphs for years T 1, 16, 26 and 34
+  last_i = 0
+  dnum = dnum + 1
+  for (i in seq(10,110,10)) {
+    data[i/10,dnum] = sum(res$results$population[(last_i:i)[-1],d])
+    print((last_i:i)[-1])
+    last_i = i
+  }
+}
+print(data);
+barplot(data[,1]/sum(data[,1]), horiz=T, main="1975", ylab="age", xlab="proportion of population") # initial values 1975
+axis(2, at=seq(1,12), labels=seq(10,120,10))
+barplot(data[,2]/sum(data[,2]), horiz=T, main="1990", ylab="age", xlab="proportion of population") # 1990
+axis(2, at=seq(1,12), labels=seq(10,120,10))
+barplot(data[,3]/sum(data[,3]), horiz=T, main="2000", ylab="age", xlab="proportion of population") # 2000
+axis(2, at=seq(1,12), labels=seq(10,120,10))
+barplot(data[,4]/sum(data[,4]), horiz=T, main="2008", ylab="age", xlab="proportion of population") # 2008
+axis(2, at=seq(1,12), labels=seq(10,120,10))
+#for (t in (res$start_year+1):res$end_year) {
+#}
+stop()
 # demographics, age structure
 par(mfrow=c(1,1))
 data = read.csv('Data/altersstruktur.csv')
@@ -18,20 +118,20 @@ legend(1,200, c("US working hours", "German working hours"), pch=c(3, 4))
 box()
 axis(2)
 axis(1, at=1:length(data$Time[which(data$Country=='Germany' & data$Time>2006 & data$Employment.status=='Total employment')]) ,lab=data$Time[which(data$Country=='Germany' & data$Time>2006 & data$Employment.status=='Total employment')])
-#stop()
+stop()
 
 
 # German Unemployment vs US unemployment
-#par(mfrow=c(2,1))
+par(mfrow=c(2,1))
 # first plot
-#plot(rev(data$Total[data$year>=2008]), axes=F, ylim=c(0,10),type="l", xlab="Years", ylab="in %")
-#legend(1,2, "German Unemployment Rate")
-#box()
-#axis(2)
-#axis(1, at=which(vec!=""), lab=vec2[vec2>=2008])
+plot(rev(data$Total[data$year>=2008]), axes=F, ylim=c(0,10),type="l", xlab="Years", ylab="in %")
+legend(1,2, "German Unemployment Rate")
+box()
+axis(2)
+axis(1, at=which(vec!=""), lab=vec2[vec2>=2008])
 # second plot
-#plot(data2$Total[data2$year>=2008], axes=F, ylim=c(0,10),type="l", xlab="Years", ylab="in %")
-#legend(1,2, "US Unemployment Rate")
-#box()
-#axis(2)
-#axis(1, at=which(vec!=""), lab=vec2[vec2>=2008])
+plot(data2$Total[data2$year>=2008], axes=F, ylim=c(0,10),type="l", xlab="Years", ylab="in %")
+legend(1,2, "US Unemployment Rate")
+box()
+axis(2)
+axis(1, at=which(vec!=""), lab=vec2[vec2>=2008])

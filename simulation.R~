@@ -1,8 +1,6 @@
 get.data = function(demography=list(), T=2004-1975, data=list()) {
-  # demographic stuff
-  # maybe use leslie??
+ # demographic stuff
   population_data = read.csv2('Data/used for simulation/population_1975_smoothed.csv', stringsAsFactors=F)
-  
   yearly_data = read.csv2('Data/used for simulation/birthrate_mortality.csv', stringsAsFactors=F)
   
   demography$population = round(as.numeric(population_data$Population)) # round is necessary because we have comma values as population is smoothed
@@ -22,18 +20,24 @@ get.data = function(demography=list(), T=2004-1975, data=list()) {
   demography$in_to_employment = as.numeric(data$pr_out_of_AL.grund) # vector of length 30, 1 for each year
   demography$out_of_employment = as.numeric(data$pr_in_to_AL.grund) # vector of length 30
   demography$out_of_workforce = as.numeric(data$pr_out_of_workforce) # vector of length 30
-  demography$in_to_workforce = demography$out_of_workforce - runif(length(demography$out_of_workforce),0,demography$out_of_workforce) # dunno... Rente ist klar... Vlt. nehm ich tatsächliche workforce irgendwoher und berechne mittels einer anderen simulation wie die Wahrscheinlichkeit sein muss?
+  demography$in_to_workforce = demography$out_of_workforce - runif(length(demography$out_of_workforce),0,demography$out_of_workforce) # dunno... Rente ist klar... Vlt. nehm ich tatsächliche workforce irgendwoher und berechne mittels einer anderen simulation wie die Wahrscheinlichkeit sein muss? In den Iab Daten, die ich hier benutze ist Rente wahrscheinlich auch mit drin. 
   
-  demography$total_jobs = 40000000 # dunno!
-# I need long-run values for the following: (even if I find year to year data from 1975 to 2004 because of the projection from 2004 to 2009)
-  demography$fertility[1:150] = as.numeric(population_data$birth.rate) # FUCK I DONT HAVE THEM BY AGE, I only have one global value... that's bullshit
-  demography$mortality[1:150] = as.numeric(population_data$death.rate) # FUCKING SHIT
-
+  #demography$total_jobs = 40000000 # not needed anymore
+# In order to get the following by year I can use the change of global birth rates and correct the 1975 values proportinally
+  demography$fertility[1:150] = as.numeric(population_data$birth.rate) # Only for year 1975 for now from statistical yearbook
+  demography$mortality[1:150] = as.numeric(population_data$death.rate) # Only for year 1975 for now from statistical yearbook
   # demography$fertility = matrix(rep(c(rep(0,16), rep(0.10, 14), rep(0.075, 10), rep(0,110)), T), ncol=T) # dunno
   # demography$mortality = matrix(rep(c(rep(0.03,5), rep(0.005, 11), rep(0.0075, 14), rep(0.0075,10),rep(0.05,10),rep(0.15,10),rep(0.2,10),rep(0.4,10),rep(0.5,70)), T), ncol=T) # dunno
   demography$mortality[150] = 1 # at that age everybody has to die
-  
   demography$migration = as.numeric(yearly_data$migration..OECD.)
+
+  if (T>30) { # take averages for projections
+    demography$in_to_workforce[31:T] = sum(demography$in_to_workforce[1:30]) / 30
+    demography$out_of_workforce[31:T] = sum(demography$out_of_workforce[1:30]) / 30
+    demography$in_to_employment[31:T] = sum(demography$in_to_employment[1:30]) / 30
+    demography$out_of_employment[31:T] = sum(demography$out_of_employment[1:30]) / 30
+    demography$migration[31:T] = sum(demography$out_of_employment[1:30]) / 30
+  }
   
   return (demography)
 }
@@ -72,14 +76,32 @@ do.simulation = function() {
   start = min(as.numeric(data$Time))
   #end = max(as.numeric(data$Time))
   end = 2010
-  data = set.data(length(data$Time), data) # initialize everything
+  data = set.data(end-start+1, data) # initialize everything
+# list of results for plotting, columns in Array are for respective years
+  data$results = list(years = rep(0,(end-start+2)), population=matrix(rep(0,(end-start+2)*150),nrow=150), in_workforce=matrix(rep(0,(end-start+2)*150),150), out_workforce=matrix(rep(0,(end-start+2)*150),150), employed=matrix(rep(0,(end-start+2)*150),150), unemployed=matrix(rep(0,(end-start+2)*150),150))  
+  data$start_year = start
+  data$end_year = end
+# initial values  
+  data$results$years[1] = 1975
+  data$results$population[,1] = data$population
+  data$results$in_workforce[,1] = data$in_workforce
+  data$results$out_workforce[,1] = data$out_workforce
+  data$results$employed[,1] = data$employed
+  data$results$unemployed[,1] = data$unemployed
   
   for (t in start:end) {
     T = t-(start-1) # year counter, starts from 1
-    if (t>2004) 
-      T=2004-(start-1)
-    # population stuff
+    
+    
 
+    print(paste('t: ',t));
+    print(paste('population: ', sum(data$population)))
+    print(paste('in workforce: ', sum(data$in_workforce)))
+    print(paste('employed: ', sum(data$employed)));
+    print(paste('unemployed: ', sum(data$unemployed)));
+    print(paste('unemployment rate: ', sum(data$unemployed)/sum(data$in_workforce))); 
+
+   # population stuff
     data = deaths(data)
     #print('data after deaths');print(data$unemployed)
     data = age(data) # let population age...
@@ -101,18 +123,13 @@ do.simulation = function() {
     data$unemployed = data$unemployed + change$unemploy - change$employ
     data$employed = data$employed - change$unemploy + change$employ
     
-    
-    #print(data$in_workforce)
-    #print(data$employed)
-    #print(data$unemployed)
-    
-    
-    print(paste('t: ',t));
-    print(paste('population: ', sum(data$population)))
-    print(paste('in workforce: ', sum(data$in_workforce)))
-    print(paste('employed: ', sum(data$employed)));
-    print(paste('unemployed: ', sum(data$unemployed)));
-    print(paste('unemployment rate: ', sum(data$unemployed)/sum(data$in_workforce))); 
+   # save results by year (T+1 because row 1 is initial value:
+    data$results$years[T+1] = t+1
+    data$results$population[,T+1] = data$population
+    data$results$in_workforce[,T+1] = data$in_workforce
+    data$results$out_workforce[,T+1] = data$out_workforce
+    data$results$employed[,T+1] = data$employed
+    data$results$unemployed[,T+1] = data$unemployed
   }
 
   return (data)
