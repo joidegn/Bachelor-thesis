@@ -73,7 +73,8 @@ set.data = function(T = 2004-1975, data=list()) {
 do.simulation = function() {
   data = read.csv2('Data/extracted from iab/csv/probabilities.csv', stringsAsFactors=F)
   
-  start = min(as.numeric(data$Time))
+  start = 2004
+  #start = min(as.numeric(data$Time))
   #end = max(as.numeric(data$Time))
   end = 2010
   data = set.data(end-start+1, data) # initialize everything

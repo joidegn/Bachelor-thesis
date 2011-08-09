@@ -1,3 +1,18 @@
+# size of elderly workforce over time  --> need data from simulation
+par(mfrow = c(1,1))
+year = 2011
+data=read.csv2('Data/age_specific_unemployment.csv', stringsAsFactors=F)
+workforce = as.numeric(data$Value[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & (data$Age=="55 to 59" | data$Age=="55 to 59")])
+age = data$Age[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & data$Age!="Total" & (data$Age=="55 to 59" | data$Age=="55 to 59")]
+years = as.numeric(data$Time[data$Series=="Labour Force" & data$Sex=="All persons" & data$Frequency=="Annual" & (data$Age=="55 to 59" | data$Age=="55 to 59")])
+print(age);
+plot(years, workforce, ylab="Workforce", xlab="Time")
+axis(1, at=1:length(age[years==year]), labels=age[years==year])
+box()
+#points(years, average_unemployment, lty=2, type = "l")
+#legend(1970, 0.15, c("unemployment rate of 55 to 59 year olds","average unemployment rate"), lty=c(1,2))
+stop()
+
 # elderly unemployment per year compared to average unemployment
 par(mfrow = c(1,1))
 data=read.csv2('Data/age_specific_unemployment.csv', stringsAsFactors=F)

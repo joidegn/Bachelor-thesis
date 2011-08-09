@@ -73,7 +73,8 @@ set.data = function(T = 2004-1975, data=list()) {
 do.simulation = function() {
   data = read.csv2('Data/extracted from iab/csv/probabilities.csv', stringsAsFactors=F)
   
-  start = min(as.numeric(data$Time))
+  start =2004
+  #start = min(as.numeric(data$Time))
   #end = max(as.numeric(data$Time))
   end = 2010
   data = set.data(end-start+1, data) # initialize everything
@@ -111,7 +112,7 @@ do.simulation = function() {
     data = migrate(data, T=T) # put births...
   # workforce stuff
    
-    change = move_workforce(data, T=T) 
+    change = move_workforce(data, T=T)
     data = change_employment_on_workforce_change(data, change, T=T)
     data$out_workforce = data$out_workforce + change$move_out_workforce - change$move_in_workforce
     data$in_workforce = data$in_workforce + change$move_in_workforce - change$move_out_workforce
