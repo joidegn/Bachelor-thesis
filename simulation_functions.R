@@ -1,6 +1,6 @@
-age = function(demography=list()) {
+age = function(demography=list(), T=1) {
   # direct effect (ageing):
-  #print(demography)
+  # print(demography)
   for (i in (length(demography$population)-1):1) {
     demography$population[i+1] = demography$population[i] # population ages
     demography$in_workforce[i+1] = demography$in_workforce[i] # workforce ages
@@ -24,35 +24,39 @@ age = function(demography=list()) {
   pr_employed = sum(demography$employed)/sum(demography$in_workforce)
   demography$employed[16] = round(pr_employed * demography$in_workforce[16])
   demography$unemployed[16] = demography$in_workforce[16] - demography$employed[16] # ...
+  demography$results$out_of_workforce_unemployed[66,T+1] = demography$unemployed[66]
+  demography$results$out_of_unemployment[66,T+1] = demography$results$out_of_unemployment[66,T+1] + demography$unemployed[66] # all unemployed people get counted
   demography$unemployed[66:150] = 0 # Pension at the age of 65?
+  
 # the following is only needed if I don't use a matching model
   #unemployed_65 = sum(rbinom(demography$population[64], 1, demography$unemployed[64]/demography$population[64])) # each of the people who starts pension was either employed or unemployed. Since we don't have data on each person we use percentage of unemployed people as a proxy.
   #demography$unemployed = demography$unemployed - unemployed_65 # formerly unemployed are now in pension and thus not unemployed anymore
   #demography$employed = demography$employed - (demography$population[65] - unemployed_65) # some employed people will go in to pension --> employment shrinks...
-  #print(demography);stop()
+  
   return (demography)
 }
 
 
 # Shall I simulate births and deaths with random variables here or in the definition of fertility and mortality?
-births = function(demography = list()) {
+births = function(demography = list(), T=1) {
   births = round(sum(demography$population * demography$fertility)) # taking age specific fertility rate for now... THIS IS NOT RANDOM...
   demography$population[1] = births
   demography$out_workforce[1] = demography$population[1] # newborn children are to young to work
   return (demography)
 }
 
-deaths = function(demography=list()) {
+deaths = function(demography=list(), T=1) {
   deaths = rep(0, 150)
   deaths_in_workforce = rep(0, 150)
-
+  
   for (i in 1:150) {
     deaths[i] = rbinom(1, demography$population[i], demography$mortality[i]) # taking age specific mortality rate for now... 
-    
     pr_to_die = deaths[i]/demography$population[i]
+    
     if (demography$population[i] == 0) # catch NaNs
       pr_to_die = 0
     deaths_in_workforce[i] = rbinom(1, demography$in_workforce[i], pr_to_die) # This assumes that dying is equally as likely when your employed as when your unemployed
+    
     if (deaths[i] < deaths_in_workforce[i])
       deaths_in_workforce[i] = deaths[i] # because its impossible. Need to think about whether this distorts probability CHANGE then
     if (demography$out_workforce[i] - (deaths[i] - deaths_in_workforce[i]) < 0) # same with out_workforce as with in_workforce below
@@ -64,7 +68,7 @@ deaths = function(demography=list()) {
   # For now people are taken out of workforce according to the percentage of people being in and out of workforce (i.e. being in workforce is independent of death rate)
     
   change = list(move_out_workforce=deaths_in_workforce, move_in_workforce=0) # change$move_out_workforce is people that were in the workforce of those that have died
-  demography = change_employment_on_workforce_change(demography, change)
+  demography = change_employment_on_workforce_change(demography, change, T=T)
   demography$in_workforce = demography$in_workforce - deaths_in_workforce
   demography$out_workforce = demography$out_workforce - (deaths - deaths_in_workforce) # deaths - those that where in workforce
   demography$population = demography$population - deaths
@@ -72,7 +76,7 @@ deaths = function(demography=list()) {
   return (demography)
 }
 
-migrate = function(demography=list(), T) {
+migrate = function(demography=list(), T=1) {
   rnd_migration = round(runif(abs(demography$migration[T]), 1, 150)) # assumes migration is evenly distributed among age groups (mighty wrong! change?)
   ages = c()
   for (i in 1:150) {
@@ -142,18 +146,20 @@ change_employment = function(demography=list(), T=1) {
   if (length(unemploy) == 0)
     unemploy = 0
   print(paste('finally unemployed:', sum(unemploy), 'which is:', sum(unemploy)/sum(demography$employed)))
-  return (list(employ=employ,unemploy=unemploy))
+  
+  #alt = demography$employed*demography$out_of_employment[T]
+  #print(paste('Alternative: ', sum(alt)))
+
+return (list(employ=employ,unemploy=unemploy))
 }
 
 
 change_employment_on_workforce_change = function(demography=list(), change=list(), T=1) {
-  
   # people who move out are more complicated!
   # If people move out of workforce we calculate likelihood of them being employed or unemployed and reduce respectively
   pr_employed = demography$employed/demography$in_workforce
   pr_employed[demography$in_workforce==0] = 0 # remove NaNs
   pr_unemployed = 1 - pr_employed
-  
  # people who move in workforce start unemployed for now:  
   demography$unemployed = demography$unemployed + change$move_in_workforce 
  # The following is unrealistic: (assumption would be that people who enter workforce find jobs at the same rate as the employment rate
@@ -180,12 +186,15 @@ change_employment_on_workforce_change = function(demography=list(), change=list(
     
     demography$employed[i] = demography$employed[i] - rnd_employed
     demography$unemployed[i] = demography$unemployed[i] - (change$move_out_workforce[i] - rnd_employed)
+    
+    demography$results$out_of_workforce_unemployed[i,T+1] = demography$results$out_of_workforce_unemployed[i,T+1] + (change$move_out_workforce[i] - rnd_employed)
+    demography$results$out_of_unemployment[i,T+1] = demography$results$out_of_unemployment[i,T+1] + (change$move_out_workforce[i] - rnd_employed)
   }
   
   return (demography)
 }
 
-match_employment = function(demography, new_employ) {
+match_employment = function(demography, new_employ, T=1) {
   # First idea: take global probability that people get employed, apply that to each age cohort and simply enforce upper limit of unemployment (does this distort probability, though? If yes it needs change)
   employ = rep(0, 150)
   probability = new_employ / sum(demography$unemployed)
@@ -199,7 +208,7 @@ match_employment = function(demography, new_employ) {
     if (sum(employ) >= new_employ) {# we have employed to many people.
       # since this has started in this age cohort we can fire some people from this cohort again
       employ[i] = employ[i] - (sum(employ)-new_employ)
-      break; # break so e dont employ more people --> This assumes that young cohorts get employed first while old cohorts might not get employed at all
+      break; # break so we dont employ more people --> This assumes that young cohorts get employed first while old cohorts might not get employed at all
     }
   }
   return (employ)

@@ -1,0 +1,10 @@
+base::::file:///home/Joi/Documents/Mannheim/Bachelorarbeit/Simulation
+script::::file:///home/Joi/Documents/Mannheim/Bachelorarbeit/Simulation/simulation_functions.R
+script::::file:///home/Joi/Documents/Mannheim/Bachelorarbeit/Simulation/simulation.R
+script::::file:///home/Joi/Documents/Mannheim/Bachelorarbeit/Simulation/grafen.R
+workspace::sidebar,0::
+commandlog::sidebar,3::
+filebrowser::sidebar,0::
+pendingjobs::sidebar,4::
+console::sidebar,3::
+helpsearch::sidebar,3::
